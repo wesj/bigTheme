@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:em="http://www.mozilla.org/2004/em-rdf#">
+
+    <Description about="urn:mozilla:install-manifest">
+        <em:id>bigTheme@digdug.org</em:id>
+        <em:type>2</em:type>
+        <em:name>Big theme</em:name>
+        <em:version>1.0.3</em:version>
+        <em:bootstrap>true</em:bootstrap>
+        <em:description>Makes lightweight themes take up more of the screen</em:description>
+        <em:creator>Wes Johnston</em:creator>
+        <em:unpack>true</em:unpack>
+
+        <em:targetApplication>
+            <Description>
+                <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id> <!--Firefox-->
+                <em:minVersion>22.0</em:minVersion>
+                <em:maxVersion>25.0</em:maxVersion>
+            </Description>
+        </em:targetApplication>
+    </Description>
+</RDF>
