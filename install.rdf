@@ -5,7 +5,7 @@
         <em:id>bigTheme@digdug.org</em:id>
         <em:type>2</em:type>
         <em:name>Big theme</em:name>
-        <em:version>1.0.3</em:version>
+        <em:version>1.0.4</em:version>
         <em:bootstrap>true</em:bootstrap>
         <em:description>Makes lightweight themes take up more of the screen</em:description>
         <em:creator>Wes Johnston</em:creator>

@@ -76,9 +76,9 @@ function getCSS(window, data, callback) {
   var CA = Cc["@mozilla.org/places/colorAnalyzer;1"].getService(Ci.mozIColorAnalyzer);
   CA.findRepresentativeColor(uri, function(success, aColor) {
     data = data || lwt.currentTheme;
-    window.console.log("getCSS " + JSON.stringify(data));
     if (!success) {
-        aColor = parseInt(data.accentcolor.substring(1), 16);
+        if (data.accentcolor)
+          aColor = parseInt(data.accentcolor.substring(1), 16);
     }
     let r = (aColor & 0xff0000) >> 16;
     let g = (aColor & 0x00ff00) >> 8;
@@ -113,6 +113,14 @@ function getCSS(window, data, callback) {
           '}\n' +
           '}\n' +
 
+          '@-moz-document url-prefix("https://addons.mozilla.org") {\n' +
+          '  html|html {\n' +
+          '    background-image: ' + bg + '\n' +
+          '    background-position: top right, right -' + height + 'px !important;\n' +
+          '    background-attachment: fixed !important;\n' +
+          '    background-repeat: no-repeat;\n' +
+          '  }\n' +
+          '}\n' +
           '@-moz-document url-prefix("about:neterror"), \n' +
           '               url-prefix("about:certerror"), \n' +
           '               url-prefix("about:blocked") {\n' +
@@ -128,6 +136,7 @@ function getCSS(window, data, callback) {
           '  overflow-y: auto;\n' +
           '  overflow-x: hidden;\n' +
           '  max-height: calc(100% - 11em);\n' +
+          '  border-top: none;\n' +
           '}\n' +
           '}\n' +
           '@-moz-document url("about:sessionrestore") { \n' +
