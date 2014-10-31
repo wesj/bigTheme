@@ -11,6 +11,7 @@ var sss;
 var ios;
 var fileName;
 var cssfile;
+var filtersfile;
 
 function init() {
   tempScope = {};
@@ -24,6 +25,7 @@ function init() {
                       .getService(Ci.nsIIOService);
   fileName = "fancyTheme.css";
   cssfile = FileUtils.getFile("ProfD", [fileName]);
+  filtersfile = FileUtils.getFile("ProfD", ["filters.svg"]);
 }
 
 function getDefaultHeight(toolbox) {
@@ -85,16 +87,29 @@ function getCSS(window, data, callback) {
     let b = (aColor & 0x0000ff);
 
     var toolbox = window.document.getElementById("navigator-toolbox");
-    window.console.log(window.location);
     var height = getDefaultHeight(toolbox);
     getDataUrl(window, uri, function(data) {
-      window.console.log(data);
+      window.console.log("Colors: " + JSON.stringify(lwt.currentTheme));
+
       var bg = 'linear-gradient(rgba(' + r + ',' + g + ',' + b + ',0), ' +
                                               'rgba(' + r + ',' + g + ',' + b + ',1) ' + (175 - height) + 'px, ' +
                                               'rgba(' + Math.round(r*0.75) + ',' + Math.round(g*0.75) + ',' + Math.round(b*0.75) + ',1)),\n' +
           '      url("' + data + '") !important;';
       var css = '@namespace url(http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul);\n' +
           '@namespace html url(http://www.w3.org/1999/xhtml);\n' +
+
+          '@-moz-document url-prefix("file") {\n' +
+          'html|html {\n' +
+          '  background-image: ' + bg + '\n' +
+          '  background-position: top right, right -' + height + 'px;\n' +
+          '  background-repeat: no-repeat;\n' +
+          '  background-attachment: fixed;\n' +
+          '  min-height: 100%;\n' +
+          '}\n' +
+          'html|body {\n' +
+          '  background-color: rgba(255,255,255,0.75) !important;\n' +
+          '}\n' +
+          '}\n' +
 
           '@-moz-document url("about:addons"), \n' +
           '               url("about:newtab"), \n' +
@@ -111,15 +126,24 @@ function getCSS(window, data, callback) {
           'html|html {\n' +
           '  min-height: 100%;\n' +
           '}\n' +
+          '#header {\n' +
+          '  -moz-margin-end: 0px !important;\n' +
           '}\n' +
-
-          '@-moz-document url-prefix("https://addons.mozilla.org") {\n' +
-          '  html|html {\n' +
-          '    background-image: ' + bg + '\n' +
-          '    background-position: top right, right -' + height + 'px !important;\n' +
-          '    background-attachment: fixed !important;\n' +
-          '    background-repeat: no-repeat;\n' +
-          '  }\n' +
+          '#categories {\n' +
+          '  -moz-margin-end: 0px !important;\n' +
+          '}\n' +
+          '.main-content {\n' +
+          '  -moz-border-start: none !important;\n' +
+          '  background-color: rgba(255, 255, 255, 0.35) !important;\n' +
+          '  background-image: none !important;\n' +
+          '}\n' +
+          '.category {\n' +
+          '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
+          '  border: none !important;\n' +
+          '}\n' +
+          '#header {\n' +
+          '  filter: url("' + filtersfile.path + '#Matrix");\n' +
+          '}\n' +
           '}\n' +
           '@-moz-document url-prefix("about:neterror"), \n' +
           '               url-prefix("about:certerror"), \n' +
@@ -135,11 +159,22 @@ function getCSS(window, data, callback) {
           'html|body {\n' +
           '  overflow-y: auto;\n' +
           '  overflow-x: hidden;\n' +
+          '  background-color: transparent !important;\n' +
           '  max-height: calc(100% - 11em);\n' +
           '  border-top: none;\n' +
+          '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
+          '}\n' +
+          'html|h1#errorTitleText {\n' +
+          // '  filter: url("' + filtersfile.path + '#Matrix");\n' +
           '}\n' +
           '}\n' +
-          '@-moz-document url("about:sessionrestore") { \n' +
+          '@-moz-document url-prefix("about:certerror") {\n' +
+          'html|div#errorPageContainer {\n' +
+          '  background-color: rgba(255,255,255,0.35) !important;\n' +
+          '}\n' +
+          '}\n' +
+          '@-moz-document url("about:accounts"), \n' +
+          '               url("about:sessionrestore") { \n' +
           'html|html {\n' +
           '  background-image: ' + bg + '\n' +
           '  background-position: top right, right -' + height + 'px;\n' +
@@ -148,22 +183,22 @@ function getCSS(window, data, callback) {
           '  height: 100%;\n' +
           '  overflow: hidden;\n' +
           '}\n' +
-          'html|body {\n' +
+          'html|div#errorPageContainer {\n' +
           '  overflow-y: auto;\n' +
           '  overflow-x: hidden;\n' +
           '  max-height: 100%;\n' +
+          '  background-color: rgba(255,255,255,0.75) !important;\n' +
           '}\n' +
           '}\n';
 
-      // on australis, about:addons doesn't remove the navbar, everywhere else it does
-      //if (Services.vc.compare(Services.appinfo.version, 24) <= 0) {
-      if (Services.prefs.getCharPref("app.update.channel") != "nightly-ux") {
-          var tabbar = window.document.getElementById("TabsToolbar").getBoundingClientRect();
-          css += "#addons-page {\n" +
-                 '    background-position: top right, right -' + tabbar.height + 'px;\n' +
-                 '}\n';
-      }
-      callback(css);
+      var filters = '<svg height="0" xmlns="http://www.w3.org/2000/svg">\n' +
+      '   <filter id="Matrix" filterUnits="objectBoundingBox" x="0%" y="0%" width="100%" height="100%">\n' +
+      '       <feFlood flood-color="' + lwt.currentTheme.textcolor + '" result="output"/>\n' +
+      '       <feComposite in="output" in2="SourceAlpha" operator="in"/>\n' +
+      '   </filter>\n' +
+      '</svg>';
+
+      callback(css, filters);
     });
   });
 }
@@ -174,16 +209,19 @@ function writeAndUseSheet(window, useIfWritten, data) {
       return;
     }
 
-    if (!data && lwt.currentTheme == null)
+    if (!data && lwt.currentTheme == null) {
         return;
+    }
 
-    getCSS(window, data, function(css) {
-        let promise = OS.File.writeAtomic(cssfile.path, css, {tmpPath: cssfile.path+".tmp"});
-        promise.then(function() {
+    getCSS(window, data, function(css, filters) {
+        Promise.all([
+          OS.File.writeAtomic(cssfile.path, css, {tmpPath: cssfile.path + ".tmp"}),
+          OS.File.writeAtomic(filtersfile.path, filters, {tmpPath: filtersfile.path + ".tmp"}),
+        ]).then(() => {
           loadSheet(window);
-        }, function(err) {
-            Cu.reportError(err);
-            loadSheet(window);
+        }).catch((err) => {
+          Cu.reportError(err);
+          loadSheet(window);
         });
     });
 }
