@@ -38,11 +38,13 @@ function getDefaultHeight(toolbox) {
         disablechrome = true;
     }
 
-    h = toolbox.getBoundingClientRect().height;
+    var rect = toolbox.getBoundingClientRect();
+    h = rect.height + rect.top;
 
     if (disablechrome) {
         toolbox.ownerDocument.documentElement.setAttribute("disablechrome", true);
     }
+
     return h;
 }
 
@@ -88,19 +90,32 @@ function getCSS(window, data, callback) {
 
     var toolbox = window.document.getElementById("navigator-toolbox");
     var height = getDefaultHeight(toolbox);
+    var height2 = getDefaultHeight(window.document.getElementById("titlebar"));
     getDataUrl(window, uri, function(data) {
       window.console.log("Colors: " + JSON.stringify(lwt.currentTheme));
 
       var bg = 'linear-gradient(rgba(' + r + ',' + g + ',' + b + ',0), ' +
-                                              'rgba(' + r + ',' + g + ',' + b + ',1) ' + (175 - height) + 'px, ' +
-                                              'rgba(' + Math.round(r*0.75) + ',' + Math.round(g*0.75) + ',' + Math.round(b*0.75) + ',1)),\n' +
-          '      url("' + data + '") !important;';
+                               'rgba(' + r + ',' + g + ',' + b + ',1) ' + (175 - height) + 'px, ' +
+                               'rgba(' + Math.round(r*0.75) + ',' + Math.round(g*0.75) + ',' + Math.round(b*0.75) + ',1)),\n' +
+          '      url("' + data + '")';
+      var bg2 = 'linear-gradient(rgba(' + r + ',' + g + ',' + b + ',0), ' +
+                                'rgba(' + r + ',' + g + ',' + b + ',1) ' + (250 - height2) + 'px, ' +
+                                'rgba(' + Math.round(r*0.75) + ',' + Math.round(g*0.75) + ',' + Math.round(b*0.75) + ',1)),\n' +
+          '      url("' + data + '")';
       var css = '@namespace url(http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul);\n' +
           '@namespace html url(http://www.w3.org/1999/xhtml);\n' +
 
-          '@-moz-document url-prefix("file") {\n' +
+          '#tab-view-deck,\n' +
+          '#main-window[customization-lwtheme]:-moz-lwtheme {\n' +
+          '  background-position: top right !important;\n' +
+          '  background-repeat: repeat !important;\n' +
+          '  background-image: ' + bg + ' !important;\n' +
+          '  background-attachment: fixed !important;\n' +
+          '}\n' +
+
+          '@-moz-document regexp("^file.*\/$") {\n' +
           'html|html {\n' +
-          '  background-image: ' + bg + '\n' +
+          '  background-image: ' + bg + ' !important;\n' +
           '  background-position: top right, right -' + height + 'px;\n' +
           '  background-repeat: no-repeat;\n' +
           '  background-attachment: fixed;\n' +
@@ -113,15 +128,27 @@ function getCSS(window, data, callback) {
 
           '@-moz-document url("about:addons"), \n' +
           '               url("about:newtab"), \n' +
+          '               url-prefix("about:preferences"), \n' +
+          '               url("about:permissions"), \n' +
           '               url("about:sessionrestore"), \n' +
           '               url("about:home") {\n' +
           '#addons-page,\n' +
           'html|body,\n' +
+          'page,\n' +
           'html|*#newtab-scrollbox {\n' +
-          '  background-image: ' + bg + '\n' +
+          '  background-image: ' + bg + ' !important;\n' +
           '  background-position: top right, right -' + height + 'px;\n' +
           '  background-repeat: no-repeat;\n' +
           '  min-height: 100%;\n' +
+          '}\n' +
+          'html|div#newtab-search-logo {\n' +
+          '  filter: url("' + filtersfile.path + '#Matrix");\n' +
+          '}\n' +
+          'html|*.launchButton,\n' +
+          'html|p,\n' +
+          'html|*#newtab-search-submit,\n' +
+          'html|*.newtab-title {\n' +
+          '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '}\n' +
           'html|html {\n' +
           '  min-height: 100%;\n' +
@@ -136,20 +163,20 @@ function getCSS(window, data, callback) {
           '  -moz-border-start: none !important;\n' +
           '  background-color: rgba(255, 255, 255, 0.35) !important;\n' +
           '  background-image: none !important;\n' +
+          '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '}\n' +
           '.category {\n' +
           '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '  border: none !important;\n' +
           '}\n' +
-          '#header {\n' +
-          '  filter: url("' + filtersfile.path + '#Matrix");\n' +
           '}\n' +
-          '}\n' +
+
           '@-moz-document url-prefix("about:neterror"), \n' +
           '               url-prefix("about:certerror"), \n' +
+          '               url("about:privatebrowsing"), \n' +
           '               url-prefix("about:blocked") {\n' +
           'html|html {\n' +
-          '  background-image: ' + bg + '\n' +
+          '  background-image: ' + bg + ' !important;\n' +
           '  background-position: top right, right -' + height + 'px !important;\n' +
           '  background-attachment: fixed;\n' +
           '  background-repeat: no-repeat;\n' +
@@ -168,20 +195,45 @@ function getCSS(window, data, callback) {
           // '  filter: url("' + filtersfile.path + '#Matrix");\n' +
           '}\n' +
           '}\n' +
+
           '@-moz-document url-prefix("about:certerror") {\n' +
           'html|div#errorPageContainer {\n' +
           '  background-color: rgba(255,255,255,0.35) !important;\n' +
           '}\n' +
           '}\n' +
+
           '@-moz-document url("about:accounts"), \n' +
+          '               url("about:about"), \n' +
+          '               url("about:buildconfig"), \n' +
+          '               url("about:cache"), \n' +
+          '               url("about:crashes"), \n' +
+          '               url("about:credits"), \n' +
+          '               url("about:config"), \n' +
+          '               url("about:license"), \n' +
+          '               url("about:memory"), \n' +
+          '               url("about:mozilla"), \n' +
+          '               url("about:plugins"), \n' +
+          '               url("about:rights"), \n' +
+          '               url("about:robots"), \n' +
+          '               url("about:support"), \n' +
+          '               url("about:sync-log"), \n' +
+          '               url("about:sync-progress"), \n' +
+          '               url("about:sync-tabs"), \n' +
+          '               url("about:telemetry"), \n' +
+          '               url("about:webrtc"), \n' +
+          '               url("about:welcomeback"), \n' +
           '               url("about:sessionrestore") { \n' +
-          'html|html {\n' +
-          '  background-image: ' + bg + '\n' +
-          '  background-position: top right, right -' + height + 'px;\n' +
+          'html|html,\n' +
+          '#bg,\n' +
+          '#warningScreen {\n' +
+          '  background-image: ' + bg + ' !important;\n' +
+          '  background-position: top right, right -' + height + 'px !important;\n' +
           '  background-attachment: fixed;\n' +
           '  background-repeat: no-repeat;\n' +
-          '  height: 100%;\n' +
+          '  background-size: auto auto !important;\n' +
+          '  min-height: 100%;\n' +
           '  overflow: hidden;\n' +
+          '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '}\n' +
           'html|div#errorPageContainer {\n' +
           '  overflow-y: auto;\n' +
@@ -189,7 +241,32 @@ function getCSS(window, data, callback) {
           '  max-height: 100%;\n' +
           '  background-color: rgba(255,255,255,0.75) !important;\n' +
           '}\n' +
-          '}\n';
+          '}\n' +
+
+          '@-moz-document url-prefix("about:preferences") { \n' +
+          '#categories {\n' +
+          '  background-color: rgba(66, 79, 90, 0.5) !important;\n' +
+          '}\n' +
+          '.category[selected] {\n' +
+          '  background-color: rgba(66, 79, 90, 0.7) !important;\n' +
+          '  box-shadow: 4px 0px 0px 0px ' + lwt.currentTheme.textcolor + ' inset !important;\n' +
+          '}\n' +
+          '}\n' +
+
+          '@-moz-document url("about:plugins") { \n' +
+          'body {\n' +
+          '  background-color: transparent;\n' +
+          '}\n' +
+          '}\n' +
+          '@-moz-document url("chrome://browser/content/tabview.html") { \n' +
+          '#bg {\n' +
+          '  background-image: ' + bg2 + ' !important;\n' +
+          '  background-position: top right, right -' + (height2) + 'px !important;\n' +
+          '  background-attachment: fixed;\n' +
+          '  background-repeat: no-repeat;\n' +
+          '  background-size: auto auto !important;\n' +
+          '}\n' +
+          '}';
 
       var filters = '<svg height="0" xmlns="http://www.w3.org/2000/svg">\n' +
       '   <filter id="Matrix" filterUnits="objectBoundingBox" x="0%" y="0%" width="100%" height="100%">\n' +
