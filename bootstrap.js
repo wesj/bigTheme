@@ -106,6 +106,7 @@ function getCSS(window, data, callback) {
           '@namespace html url(http://www.w3.org/1999/xhtml);\n' +
 
           '#tab-view-deck,\n' +
+          '#browser-panel,\n' + 
           '#main-window[customization-lwtheme]:-moz-lwtheme {\n' +
           '  background-position: top right !important;\n' +
           '  background-repeat: repeat !important;\n' +
@@ -138,6 +139,7 @@ function getCSS(window, data, callback) {
           'html|*#newtab-scrollbox {\n' +
           '  background-image: ' + bg + ' !important;\n' +
           '  background-position: top right, right -' + height + 'px;\n' +
+          '  background-attachment: fixed !important;\n' +
           '  background-repeat: no-repeat;\n' +
           '  min-height: 100%;\n' +
           '}\n' +
@@ -147,6 +149,7 @@ function getCSS(window, data, callback) {
           'html|*.launchButton,\n' +
           'html|p,\n' +
           'html|*#newtab-search-submit,\n' +
+          'htmllabel,\n' +
           'html|*.newtab-title {\n' +
           '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '}\n' +
@@ -183,6 +186,8 @@ function getCSS(window, data, callback) {
           '  height: 100%;\n' +
           '  overflow: hidden;\n' +
           '}\n' +
+          'html|h1,\n' +
+          'html|label,\n' +
           'html|body {\n' +
           '  overflow-y: auto;\n' +
           '  overflow-x: hidden;\n' +
@@ -192,7 +197,7 @@ function getCSS(window, data, callback) {
           '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '}\n' +
           'html|h1#errorTitleText {\n' +
-          // '  filter: url("' + filtersfile.path + '#Matrix");\n' +
+          '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '}\n' +
           '}\n' +
 
