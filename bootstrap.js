@@ -12,24 +12,28 @@ var ios;
 var fileName;
 var cssfile;
 var filtersfile;
+var installPath;
 
-function init() {
+function init(installPath) {
+  let resource = Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsIResProtocolHandler);
+  let alias = Services.io.newFileURI(installPath);
+  if (!installPath.isDirectory())
+     alias = Services.io.newURI("jar:" + alias.spec + "!/", null, null);
+  resource.setSubstitution("bigtheme", alias);
+
   tempScope = {};
   Cu.import("resource://gre/modules/LightweightThemeManager.jsm", tempScope);
   lwt = tempScope.LightweightThemeManager;
 
+  sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
+  ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
 
-  sss = Cc["@mozilla.org/content/style-sheet-service;1"]
-                      .getService(Ci.nsIStyleSheetService);
-  ios = Cc["@mozilla.org/network/io-service;1"]
-                      .getService(Ci.nsIIOService);
   fileName = "fancyTheme.css";
-  cssfile = FileUtils.getFile("ProfD", [fileName]);
-  filtersfile = FileUtils.getFile("ProfD", ["filters.svg"]);
+  cssfile = new FileUtils.File(installPath.path); cssfile.append(fileName);
+  filtersfile = new FileUtils.File(installPath.path); filtersfile.append("filters.svg");
 }
 
 function getDefaultHeight(toolbox) {
-    //toolbox.ownerDocument.defaultView.console.log("get h");
     var h = 0;
 
     var disablechrome = false;
@@ -69,21 +73,13 @@ function getDataUrl(win, imgUri, callback) {
   img.src = imgUri.spec;
 }
 
-function getCSS(window, data, callback) {
-  window.console.log("get css");
-  var lwtfile = FileUtils.getFile("ProfD", ['lightweighttheme-header']);
-  var uri = ios.newFileURI(lwtfile);
-  if (data) {
-    uri = ios.newURI(data.headerURL, null, null);
-  }
-
-  var CA = Cc["@mozilla.org/places/colorAnalyzer;1"].getService(Ci.mozIColorAnalyzer);
-  CA.findRepresentativeColor(uri, function(success, aColor) {
+function writeData(data, success, aColor, window, uri, callback) {
     data = data || lwt.currentTheme;
     if (!success) {
         if (data.accentcolor)
-          aColor = parseInt(data.accentcolor.substring(1), 16);
+            aColor = parseInt(data.accentcolor.substring(1), 16);
     }
+
     let r = (aColor & 0xff0000) >> 16;
     let g = (aColor & 0x00ff00) >> 8;
     let b = (aColor & 0x0000ff);
@@ -92,17 +88,17 @@ function getCSS(window, data, callback) {
     var height = getDefaultHeight(toolbox);
     var height2 = getDefaultHeight(window.document.getElementById("titlebar"));
     getDataUrl(window, uri, function(data) {
-      window.console.log("Colors: " + JSON.stringify(lwt.currentTheme));
+        window.console.log("Colors: " + JSON.stringify(lwt.currentTheme));
 
-      var bg = 'linear-gradient(rgba(' + r + ',' + g + ',' + b + ',0), ' +
+        var bg = 'linear-gradient(rgba(' + r + ',' + g + ',' + b + ',0), ' +
                                'rgba(' + r + ',' + g + ',' + b + ',1) ' + (175 - height) + 'px, ' +
                                'rgba(' + Math.round(r*0.75) + ',' + Math.round(g*0.75) + ',' + Math.round(b*0.75) + ',1)),\n' +
           '      url("' + data + '")';
-      var bg2 = 'linear-gradient(rgba(' + r + ',' + g + ',' + b + ',0), ' +
+        var bg2 = 'linear-gradient(rgba(' + r + ',' + g + ',' + b + ',0), ' +
                                 'rgba(' + r + ',' + g + ',' + b + ',1) ' + (250 - height2) + 'px, ' +
                                 'rgba(' + Math.round(r*0.75) + ',' + Math.round(g*0.75) + ',' + Math.round(b*0.75) + ',1)),\n' +
           '      url("' + data + '")';
-      var css = '@namespace url(http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul);\n' +
+        var css = '@namespace url(http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul);\n' +
           '@namespace html url(http://www.w3.org/1999/xhtml);\n' +
 
           '#tab-view-deck,\n' +
@@ -144,7 +140,7 @@ function getCSS(window, data, callback) {
           '  min-height: 100%;\n' +
           '}\n' +
           'html|div#newtab-search-logo {\n' +
-          '  filter: url("' + filtersfile.path + '#Matrix");\n' +
+          '  filter: url("resource://bigtheme/filters.svg#Matrix");\n' +
           '}\n' +
           'html|*.launchButton,\n' +
           'html|p,\n' +
@@ -198,6 +194,10 @@ function getCSS(window, data, callback) {
           '}\n' +
           'html|h1#errorTitleText {\n' +
           '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
+          '  border-bottom: 1px solid ' + lwt.currentTheme.textcolor + ' !important;\n' +
+          '}\n' +
+          'html|h1#errorTitle {\n' +
+          '  filter: url("resource://bigtheme/filters.svg#Matrix");\n' +
           '}\n' +
           '}\n' +
 
@@ -273,15 +273,33 @@ function getCSS(window, data, callback) {
           '}\n' +
           '}';
 
-      var filters = '<svg height="0" xmlns="http://www.w3.org/2000/svg">\n' +
-      '   <filter id="Matrix" filterUnits="objectBoundingBox" x="0%" y="0%" width="100%" height="100%">\n' +
-      '       <feFlood flood-color="' + lwt.currentTheme.textcolor + '" result="output"/>\n' +
-      '       <feComposite in="output" in2="SourceAlpha" operator="in"/>\n' +
-      '   </filter>\n' +
-      '</svg>';
+        var filters = '<svg height="0" xmlns="http://www.w3.org/2000/svg">\n' +
+        '   <filter id="Matrix" filterUnits="objectBoundingBox" x="0%" y="0%" width="100%" height="100%">\n' +
+        '       <feFlood flood-color="' + lwt.currentTheme.textcolor + '" result="output"/>\n' +
+        '       <feComposite in="output" in2="SourceAlpha" operator="in"/>\n' +
+        '   </filter>\n' +
+        '</svg>';
 
-      callback(css, filters);
+        callback(css, filters);
     });
+}
+
+function getCSS(window, data, callback) {
+  window.console.log("get css");
+  var lwtfile = FileUtils.getFile("ProfD", ['lightweighttheme-header']);
+  var uri = ios.newFileURI(lwtfile);
+  if (data) {
+    uri = ios.newURI(data.headerURL, null, null);
+  }
+
+  var tempScope = {}
+  var caUri = Services.io.newFileURI(installPath);
+  Cu.import(caUri.spec, tempScope);
+  var ca = new tempScope.ColorAnalyzer();
+  ca.findRepresentativeColor(uri, {
+    onComplete: function(success, aColor, width, height) {
+        writeData(data, success, aColor, window, uri, callback)
+    }
   });
 }
 
@@ -350,46 +368,7 @@ function unloadSheet() {
           sss.unregisterSheet(uri, sss.USER_SHEET);
     } catch(ex) { }
 }
-/*
-var listener = {
-    update: function() {
-      let windows = Services.wm.getEnumerator("navigator:browser");
-      while (windows.hasMoreElements()) {
-        let domWindow = windows.getNext().QueryInterface(Ci.nsIDOMWindow);
-        domWindow.setTimeout(function() {
-          writeAndUseSheet(domWindow, true);
-        }, 1000);
-        return;
-      }
-    },
-    onEnabling: function(addon, needsRestart) { },
-    onEnabled: function(addon) {
-      Services.console.logStringMessage("enabled " + addon.type);
-        if (addon.type == "theme")
-            this.update();
-    },
-    onDisabling: function(addon, needsRestart) { },
-    onDisabled: function(addon) {
-      Services.console.logStringMessage("disabled " + addon.type);
-      if (addon.type == "theme")
-          unloadAndDeleteSheet();
-    },
-    onInstalling: function(addon, needsRestart) { },
-    onInstalled: function(addon) {
-      Services.console.logStringMessage("installed " + addon.type);
-        if (addon.type == "theme")
-            this.update();
-    },
-    onUninstalling: function(addon, needsRestart) { },
-    onUninstalled: function(addon) {
-        Services.console.logStringMessage("uinstalled " + addon.type);
-        if (addon.type == "theme")
-          unloadAndDeleteSheet();
-    },
-    onOperationCancelled: function(addon) { },
-    onPropertyChanged: function(addon, properties) { },
-}
-*/
+
 var obs = {
   update: function(data) {
     let windows = Services.wm.getEnumerator("navigator:browser");
@@ -475,7 +454,11 @@ var windowListener = {
 };
 
 function startup(aData, aReason) {
-  init();
+  init(aData.installPath);
+
+  installPath = aData.installPath
+  installPath.append("ColorAnalyzer.js")
+
   let windows = Services.wm.getEnumerator("navigator:browser");
   while (windows.hasMoreElements()) {
     let domWindow = windows.getNext().QueryInterface(Ci.nsIDOMWindow);
@@ -501,6 +484,9 @@ function shutdown(aData, aReason) {
     let domWindow = windows.getNext().QueryInterface(Ci.nsIDOMWindow);
     unloadFromWindow(domWindow);
   }
+
+  let resource = Services.io.getProtocolHandler("resource").QueryInterface(Ci.nsIResProtocolHandler);
+  resource.setSubstitution("bigtheme", null);
 }
 
 function install(aData, aReason) {
@@ -514,7 +500,6 @@ function install(aData, aReason) {
 function uninstall(aData, aReason) {
   Services.console.logStringMessage("uninstall");
   unloadAndDeleteSheet();
-  //AddonManager.removeAddonListener(listener);
   Services.obs.removeObserver(obs, "lightweight-theme-styling-update", false);
   Services.obs.removeObserver(obs, "lightweight-theme-apply", false);
 }
