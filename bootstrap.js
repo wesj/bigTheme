@@ -64,13 +64,32 @@ function getDataUrl(win, imgUri, callback) {
     callback(canvas.toDataURL("image/png", ""));
   }
 
-  win.console.log("Get data " + imgUri.spec);
   if (imgUri.spec.startsWith("http://")) {
     callback(imgUri);
     return;
   }
 
   img.src = imgUri.spec;
+}
+
+function getCSS(window, data, callback) {
+  window.console.log("get css");
+  var lwtfile = FileUtils.getFile("ProfD", ['lightweighttheme-header']);
+  var uri = ios.newFileURI(lwtfile);
+  if (data) {
+    uri = ios.newURI(data.headerURL, null, null);
+  }
+
+  var tempScope = {}
+  var caUri = Services.io.newFileURI(installPath);
+  console.log("Import", caUri.spec);
+  Cu.import(caUri.spec, tempScope);
+  var ca = new tempScope.ColorAnalyzer();
+  ca.findRepresentativeColor(uri, {
+    onComplete: function(success, aColor, width, height) {
+        writeData(data, success, aColor, window, uri, callback)
+    }
+  });
 }
 
 function writeData(data, success, aColor, window, uri, callback) {
@@ -120,14 +139,17 @@ function writeData(data, success, aColor, window, uri, callback) {
           '}\n' +
           'html|body {\n' +
           '  background-color: rgba(255,255,255,0.75) !important;\n' +
+          '  box-shadow: 0px 3px 10px rgba(0,0,0,0.25) !important;\n' +
           '}\n' +
           '}\n' +
 
           '@-moz-document url("about:addons"), \n' +
           '               url("about:newtab"), \n' +
+          '               url-prefix("about:debugging"), \n' +
           '               url-prefix("about:preferences"), \n' +
+          '               url-prefix("about:profiles"), \n' +
+          '               url-prefix("about:networking"), \n' +
           '               url("about:permissions"), \n' +
-          '               url("about:sessionrestore"), \n' +
           '               url("about:home") {\n' +
           '#addons-page,\n' +
           'html|body,\n' +
@@ -138,6 +160,7 @@ function writeData(data, success, aColor, window, uri, callback) {
           '  background-attachment: fixed !important;\n' +
           '  background-repeat: no-repeat;\n' +
           '  min-height: 100%;\n' +
+          '  color: ' + lwt.currentTheme.textcolor + ';\n' +
           '}\n' +
           'html|div#newtab-search-logo {\n' +
           '  filter: url("resource://bigtheme/filters.svg#Matrix");\n' +
@@ -155,8 +178,10 @@ function writeData(data, success, aColor, window, uri, callback) {
           '#header {\n' +
           '  -moz-margin-end: 0px !important;\n' +
           '}\n' +
+          "#nav-header,\n" +
           '#categories {\n' +
           '  -moz-margin-end: 0px !important;\n' +
+          '  background-color: transparent !important;\n' +
           '}\n' +
           '.main-content {\n' +
           '  -moz-border-start: none !important;\n' +
@@ -168,12 +193,19 @@ function writeData(data, success, aColor, window, uri, callback) {
           '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '  border: none !important;\n' +
           '}\n' +
+          '.category[selected] {\n' +
+          '  background-color: rgba(0,0,0,0.25) !important;\n' +
+          '}\n' +
           '}\n' +
 
           '@-moz-document url-prefix("about:neterror"), \n' +
           '               url-prefix("about:certerror"), \n' +
+          '               url("about:support"), \n' +
+          '               url("about:sessionrestore"), \n' +
+          '               url("about:welcome-back"), \n' +
           '               url("about:privatebrowsing"), \n' +
           '               url-prefix("about:blocked") {\n' +
+          'window,\n' +
           'html|html {\n' +
           '  background-image: ' + bg + ' !important;\n' +
           '  background-position: top right, right -' + height + 'px !important;\n' +
@@ -182,7 +214,6 @@ function writeData(data, success, aColor, window, uri, callback) {
           '  height: 100%;\n' +
           '  overflow: hidden;\n' +
           '}\n' +
-          'html|h1,\n' +
           'html|label,\n' +
           'html|body {\n' +
           '  overflow-y: auto;\n' +
@@ -192,20 +223,50 @@ function writeData(data, success, aColor, window, uri, callback) {
           '  border-top: none;\n' +
           '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '}\n' +
+          'html|h1 {' +
+          '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
+          '  padding: 0;\n' +
+          '}\n' +
+          'html|body {' +
+          '     background-image: none !important;\n' +
+          // linear-gradient(-45deg, rgba(238, 238, 238, 0.5), rgba(238, 238, 238, 0.5) 33%, rgba(251, 251, 251, 0.5) 33%, rgba(251, 251, 251, 0.5) 66%, rgba(238, 238, 238, 0.5) 66%, rgba(238, 238, 238, 0.5)) !important;\n' +
+          '}\n' +
+          'html|h1.title-text,\n' +
           'html|h1#errorTitleText {\n' +
           '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '  border-bottom: 1px solid ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '}\n' +
-          'html|h1#errorTitle {\n' +
-          '  filter: url("resource://bigtheme/filters.svg#Matrix");\n' +
+          'html|button {\n' +
+          '  background-color: rgba(' + Math.round(r*0.5) + ',' + Math.round(g*0.5) + ',' + Math.round(b*0.5) + ',1) !important;\n' +
+          '  border: 1px solid ' + lwt.currentTheme.textcolor + ' !important;\n' +
+          '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
+          '}\n' +
+          '#ignoreWarningButton {\n' +
+          '  background-color: transparent !important;\n' +
+          '  border: none !important;\n' +
+          '  color: ' + lwt.currentTheme.textcolor + ' !important;\n' +
           '}\n' +
           '}\n' +
 
           '@-moz-document url-prefix("about:certerror") {\n' +
-          'html|div#errorPageContainer {\n' +
-          '  background-color: rgba(255,255,255,0.35) !important;\n' +
+          'html|div.title {\n' +
+          '      background-image: url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent("<?xml version='1.0' encoding='utf-8'?><svg version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='45' height='45' viewBox='0 0 45 45'><style>.icon-default { fill: #999; }</style><defs><rect id='shape-lock-clasp-outer' x='8' y='2' width='28' height='40' rx='14' ry='14' /><rect id='shape-lock-clasp-inner' x='14' y='8' width='16' height='28' rx='8' ry='8' /><rect id='shape-lock-base' x='4' y='18' width='36' height='24' rx='3' ry='3' /><mask id='mask-clasp-cutout'><rect width='48' height='48' fill='#000' /><use xlink:href='#shape-lock-clasp-outer' fill='#fff' /><use xlink:href='#shape-lock-clasp-inner' fill='#000' /><line x1='4' y1='38' x2='41' y2='3' stroke='#000' stroke-width='5.5' /><line x1='4' y1='46' x2='41' y2='11' stroke='#000' stroke-width='5.5' /><rect x='4' y='18' width='36' height='26' rx='6' ry='6' /></mask><mask id='mask-base-cutout'><rect width='45' height='45' fill='#000' /><use xlink:href='#shape-lock-base' fill='#fff' /><line x1='2.5' y1='41.5' x2='41' y2='5' stroke='#000' stroke-width='8.5' /></mask></defs><use xlink:href='#shape-lock-clasp-outer' mask='url(#mask-clasp-cutout)' fill='" + lwt.currentTheme.textcolor + "' /><use xlink:href='#shape-lock-base' mask='url(#mask-base-cutout)' fill='" + lwt.currentTheme.textcolor + "' /><line x1='2.5' y1='41.5' x2='41' y2='5' stroke='#d92d21' stroke-width='5.5' /></svg>") + '") !important;\n' +
           '}\n' +
           '}\n' +
+
+          '@-moz-document url-prefix("about:neterror") {\n' +
+          'html|div.title {\n' +
+          '      background-image: url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='" + lwt.currentTheme.textcolor + "'><circle cx='50' cy='50' r='44' stroke='" + lwt.currentTheme.textcolor + "' stroke-width='11' fill='none'/><circle cx='50' cy='24.6' r='6.4'/><rect x='45' y='39.9' width='10.1' height='41.8'/></svg>") + '") !important;\n' +
+          '}\n' +
+          '}\n' +
+
+
+          '@-moz-document url-prefix("about:blocked") {\n' +
+          'html|div.title {\n' +
+          '      background-image: url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' viewBox='0 0 45 45'><defs><circle id='stop-sign' cx='22.5' cy='22.5' r='20.5'/><mask id='stop-symbol'><rect width='45' height='45' fill='#ff0'/><line x1='10' y1='23' x2='35' y2='23' stroke='#000' stroke-width='6'/></mask></defs><use xlink:href='#stop-sign' mask='url(#stop-symbol)' fill='" + lwt.currentTheme.textcolor + "'/></svg>") + '") !important;\n' +
+          '}\n' +
+          '}\n' +
+
 
           '@-moz-document url("about:accounts"), \n' +
           '               url("about:about"), \n' +
@@ -213,14 +274,18 @@ function writeData(data, success, aColor, window, uri, callback) {
           '               url("about:cache"), \n' +
           '               url("about:crashes"), \n' +
           '               url("about:credits"), \n' +
+          '               url("about:checkerboard"), \n' +
           '               url("about:config"), \n' +
+          '               url("about:downloads"), \n' +
+          '               url("about:healthreport"), \n' +
           '               url("about:license"), \n' +
           '               url("about:memory"), \n' +
           '               url("about:mozilla"), \n' +
+          '               url("about:performance"), \n' +
           '               url("about:plugins"), \n' +
           '               url("about:rights"), \n' +
           '               url("about:robots"), \n' +
-          '               url("about:support"), \n' +
+          '               url("about:serviceworkers"), \n' +
           '               url("about:sync-log"), \n' +
           '               url("about:sync-progress"), \n' +
           '               url("about:sync-tabs"), \n' +
@@ -228,6 +293,7 @@ function writeData(data, success, aColor, window, uri, callback) {
           '               url("about:webrtc"), \n' +
           '               url("about:welcomeback"), \n' +
           '               url("about:sessionrestore") { \n' +
+          'window,\n' +
           'html|html,\n' +
           '#bg,\n' +
           '#warningScreen {\n' +
@@ -282,25 +348,6 @@ function writeData(data, success, aColor, window, uri, callback) {
 
         callback(css, filters);
     });
-}
-
-function getCSS(window, data, callback) {
-  window.console.log("get css");
-  var lwtfile = FileUtils.getFile("ProfD", ['lightweighttheme-header']);
-  var uri = ios.newFileURI(lwtfile);
-  if (data) {
-    uri = ios.newURI(data.headerURL, null, null);
-  }
-
-  var tempScope = {}
-  var caUri = Services.io.newFileURI(installPath);
-  Cu.import(caUri.spec, tempScope);
-  var ca = new tempScope.ColorAnalyzer();
-  ca.findRepresentativeColor(uri, {
-    onComplete: function(success, aColor, width, height) {
-        writeData(data, success, aColor, window, uri, callback)
-    }
-  });
 }
 
 function writeAndUseSheet(window, useIfWritten, data) {

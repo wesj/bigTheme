@@ -5,7 +5,7 @@
 APP_NAME="BigTheme"
 CHROME_PROVIDERS=
 CLEAN_UP=1
-ROOT_FILES="bootstrap.js icon.png"
+ROOT_FILES="ColorAnalyzer.js bootstrap.js icon.png"
 ROOT_DIRS=
 BEFORE_BUILD=
 AFTER_BUILD=
